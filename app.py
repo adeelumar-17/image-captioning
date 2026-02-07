@@ -26,7 +26,7 @@ import os
 # =============================
 # Replace with your Hugging Face repository ID
 # Format: "username/repo-name"
-HF_REPO_ID = "YOUR_USERNAME/image-captioning-model"  # <-- CHANGE THIS
+HF_REPO_ID = "adeelumar17/neural-storyteller"  # <-- CHANGE THIS
 
 # File names on Hugging Face Hub
 MODEL_FILENAME = "best_caption_model.pth"
