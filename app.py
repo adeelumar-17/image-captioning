@@ -4,11 +4,8 @@
 # This cell creates an interactive Streamlit app for the image captioning model.
 # Upload an image → Get AI-generated caption
 # Supports both greedy and beam search decoding.
-# Model files are downloaded from Hugging Face Hub.
+# Model files (.pth and .pkl) should be in the same directory as this script.
 # =============================================================================
-
-# Install dependencies if not available
-# !pip install streamlit torch torchvision huggingface_hub pillow -q
 
 import streamlit as st
 import torch
@@ -18,19 +15,13 @@ from PIL import Image
 from torchvision import models, transforms
 import torch.nn as nn
 import torch.nn.functional as F
-from huggingface_hub import hf_hub_download
-import os
 
 # =============================
-# HUGGING FACE CONFIGURATION
+# FILE CONFIGURATION
 # =============================
-# Replace with your Hugging Face repository ID
-# Format: "username/repo-name"
-HF_REPO_ID = "YOUR_USERNAME/image-captioning-model"  # <-- CHANGE THIS
-
-# File names on Hugging Face Hub
-MODEL_FILENAME = "best_caption_model.pth"
-VOCAB_FILENAME = "vocabulary.pkl"
+# Model files in the same directory (root)
+MODEL_PATH = "best_caption_model.pth"
+VOCAB_PATH = "vocabulary.pkl"
 
 
 # =============================
@@ -96,32 +87,6 @@ class ImageCaptioningModel(nn.Module):
 
 
 # =============================
-# DOWNLOAD FILES FROM HUGGING FACE
-# =============================
-
-@st.cache_resource
-def download_from_huggingface():
-    """Download model and vocabulary files from Hugging Face Hub."""
-    st.info(f"📥 Downloading model files from Hugging Face: {HF_REPO_ID}")
-    
-    # Download model checkpoint
-    model_path = hf_hub_download(
-        repo_id=HF_REPO_ID,
-        filename=MODEL_FILENAME,
-        cache_dir="./hf_cache"
-    )
-    
-    # Download vocabulary
-    vocab_path = hf_hub_download(
-        repo_id=HF_REPO_ID,
-        filename=VOCAB_FILENAME,
-        cache_dir="./hf_cache"
-    )
-    
-    return model_path, vocab_path
-
-
-# =============================
 # LOAD MODELS AND VOCABULARY
 # =============================
 
@@ -131,11 +96,8 @@ def load_models():
     # Device (use CPU for Streamlit Cloud compatibility)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    # Download files from Hugging Face Hub
-    model_path, vocab_path = download_from_huggingface()
-    
-    # Load vocabulary
-    with open(vocab_path, 'rb') as f:
+    # Load vocabulary from local file
+    with open(VOCAB_PATH, 'rb') as f:
         vocab = pickle.load(f)
     
     # Load ResNet50 for feature extraction
@@ -161,7 +123,7 @@ def load_models():
         dropout=0.5
     ).to(device)
     
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(MODEL_PATH, map_location=device)
     caption_model.load_state_dict(checkpoint['model_state_dict'])
     caption_model.eval()
     
