@@ -10,11 +10,13 @@
 import streamlit as st
 import torch
 import pickle
+import re
 import numpy as np
 from PIL import Image
 from torchvision import models, transforms
 import torch.nn as nn
 import torch.nn.functional as F
+from collections import Counter
 
 # =============================
 # FILE CONFIGURATION
@@ -22,6 +24,99 @@ import torch.nn.functional as F
 # Model files in the same directory (root)
 MODEL_PATH = "best_caption_model.pth"
 VOCAB_PATH = "vocabulary.pkl"
+
+
+# =============================
+# VOCABULARY CLASS (Required for unpickling)
+# =============================
+
+class Vocabulary:
+    """
+    Vocabulary class for text-to-index and index-to-text conversions.
+    This class must be defined here for pickle to load vocabulary.pkl correctly.
+    """
+    def __init__(self, min_freq=5):
+        self.min_freq = min_freq
+        self.word2idx = {}
+        self.idx2word = {}
+        self.word_freq = Counter()
+        
+        # Initialize special tokens
+        self.pad_token = '<pad>'
+        self.start_token = '<start>'
+        self.end_token = '<end>'
+        self.unk_token = '<unk>'
+        
+        # Add special tokens with reserved indices
+        self._add_special_tokens()
+    
+    def _add_special_tokens(self):
+        """Add special tokens to vocabulary with fixed indices."""
+        special_tokens = [self.pad_token, self.start_token, self.end_token, self.unk_token]
+        for idx, token in enumerate(special_tokens):
+            self.word2idx[token] = idx
+            self.idx2word[idx] = token
+    
+    @property
+    def pad_idx(self):
+        return self.word2idx[self.pad_token]
+    
+    @property
+    def start_idx(self):
+        return self.word2idx[self.start_token]
+    
+    @property
+    def end_idx(self):
+        return self.word2idx[self.end_token]
+    
+    @property
+    def unk_idx(self):
+        return self.word2idx[self.unk_token]
+    
+    def __len__(self):
+        return len(self.word2idx)
+    
+    def build_vocabulary(self, captions):
+        """Build vocabulary from list of captions."""
+        for caption in captions:
+            tokens = self.tokenize(caption)
+            self.word_freq.update(tokens)
+        
+        idx = len(self.word2idx)
+        for word, freq in self.word_freq.items():
+            if freq >= self.min_freq and word not in self.word2idx:
+                self.word2idx[word] = idx
+                self.idx2word[idx] = word
+                idx += 1
+    
+    def tokenize(self, text):
+        """Tokenize and clean text."""
+        text = text.lower()
+        text = re.sub(r"[^a-zA-Z0-9\s']", '', text)
+        tokens = text.split()
+        return tokens
+    
+    def numericalize(self, text):
+        """Convert text to list of indices."""
+        tokens = self.tokenize(text)
+        indices = [self.start_idx]
+        for token in tokens:
+            indices.append(self.word2idx.get(token, self.unk_idx))
+        indices.append(self.end_idx)
+        return indices
+    
+    def denumericalize(self, indices):
+        """Convert list of indices back to text."""
+        words = []
+        for idx in indices:
+            if isinstance(idx, torch.Tensor):
+                idx = idx.item()
+            word = self.idx2word.get(idx, self.unk_token)
+            if word == self.end_token:
+                break
+            if word not in [self.start_token, self.pad_token]:
+                words.append(word)
+        return ' '.join(words)
 
 
 # =============================
