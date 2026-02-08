@@ -19,9 +19,13 @@ import torch.nn.functional as F
 # =============================
 # FILE CONFIGURATION
 # =============================
-# Model files in the same directory (root)
-MODEL_PATH = "best_caption_model.pth"
-VOCAB_PATH = "vocabulary.pkl"
+# Replace with your Hugging Face repository ID
+# Format: "username/repo-name"
+HF_REPO_ID = "YOUR_USERNAME/image-captioning-model"  # <-- CHANGE THIS
+
+# File names on Hugging Face Hub
+MODEL_FILENAME = "best_caption_model.pth"
+VOCAB_FILENAME = "vocabulary.pkl"
 
 
 # =============================
